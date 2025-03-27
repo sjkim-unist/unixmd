@@ -11,7 +11,7 @@ math_lib_type = "mkl"
 math_lib_dir = "${MKLROOT}/lib/intel64/"
 #math_lib_dir = "/my_disk/my_name/lapack/"
 
-sourcefile1 = ["./src/lib/mqc/el_propagator.pyx", "./src/lib/mqc/rk4.c", "./src/lib/mqc/exponential.c"]
+sourcefile1 = ["./src/lib/mqc/el_propagator.pyx", "./src/lib/mqc/rk4.c", "./src/lib/mqc/exponential.c","./src/lib/mqc/exponential_xf.c"]
 sourcefile2 = ["./src/lib/mqc/el_propagator_xf.pyx", "./src/lib/mqc/rk4_xf.c"]
 sourcefile3 = ["./src/lib/mqc/el_propagator_ct.pyx", "./src/lib/mqc/rk4_ct.c"]
 sourcefile4 = ["./src/lib/cioverlap/cioverlap.pyx", "./src/lib/cioverlap/tdnac.c"]
@@ -31,7 +31,7 @@ if (math_lib_type == "lapack"):
     lib_dirs += [math_lib_dir]
     extra_flags += ["-D HAVE_LAPACK"]
 elif (math_lib_type == "mkl"):
-    libs += ["mkl_intel_lp64", "mkl_sequential", "mkl_core", ":libmkl_avx512.so.1"]
+    libs += ["mkl_intel_lp64", "mkl_sequential", "mkl_core", "mkl_rt"]
     lib_dirs += [math_lib_dir]
     extra_flags += ["-D HAVE_MKL"]
 else:
