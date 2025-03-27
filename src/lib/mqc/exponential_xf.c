@@ -116,6 +116,94 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
         exp_idiag[ist].imag = 0.0;
     }
 
+    /*
+    // TODO : Use memset
+    memset(exp_idiag, 0, (nst * nst)*sizeof(exp_idiag[0]));
+    */
+
+    frac = 1.0 / (double)nesteps;
+    edt = dt * frac;
+
+    for(iestep = 0; iestep < nesteps; iestep++){
+
+        // Initialize variables related to decoherence
+        for(iat = 0; iat < nat; iat++){
+            for(isp = 0; isp < ndim; isp++){
+                qmom[iat][isp] = 0.0;
+            }
+        }
+
+        for(ist = 0; ist < nst; ist++){
+            for(jst = 0; jst < nst; jst++){
+                dec[ist][jst] = 0.0;
+                dec_h[ist][jst] = 0.0 + 0.0 * I;
+            }
+        }
+
+        // Calculate densities from current coefficients
+        for(ist = 0; ist < nst; ist++){
+            for(jst = 0; jst < nst; jst++){
+                rho[jst][ist] = (conj(coef[jst]) * coef[ist]);
+            }
+        }
+
+        // Get quantum momentum from auxiliary positions and sigma values
+        for(ist = 0; ist < nst; ist++){ 
+
+            if(l_coh[ist] == 1){
+                for(iat = 0; iat < nat; iat++){
+                    for(isp = 0; isp < ndim; isp++){
+                        qmom[iat][isp] += 0.5 * rho[ist][ist] * (pos[iat][isp] - aux_pos[ist][iat][isp])
+                            / pow(sigma[iat][isp], 2.0) / mass[iat];
+                    }
+                }
+            }
+        }
+ 
+        // Get decoherence term from quantum momentum and phase
+        for(ist = 0; ist < nst; ist++){
+            for(jst = ist + 1; jst < nst; jst++){ 
+
+                if(l_coh[ist] == 1 && l_coh[jst] == 1){
+                    for(iat = 0; iat < nat; iat++){
+                        for(isp = 0; isp < ndim; isp++){
+                            dec[ist][jst] += qmom[iat][isp] * (phase[ist][iat][isp] - phase[jst][iat][isp]);
+                        }
+                    }
+                }
+                dec[jst][ist] = - 1.0 * dec[ist][jst];
+ 
+            }
+        }
+ 
+        // Get hamiltonian contribution from decoherence term
+        for(ist = 0; ist < nst; ist++){
+            for(jst = 0; jst < nst; jst++){
+                dec_h[ist][jst] -= rho[jst][ist] * dec[jst][ist] * I;
+            }
+        }
+
+        // Interpolate energy and NACME terms between time t and t + dt
+        for(ist = 0; ist < nst; ist++){
+            eenergy[ist] = energy_old[ist] + (energy[ist] - energy_old[ist]) * (double)iestep * frac;
+            for(jst = 0; jst < nst; jst++){
+                dv[ist][jst] = nacme_old[ist][jst] + (nacme[ist][jst] - nacme_old[ist][jst])
+                    * (double)iestep * frac;
+            }
+        }
+
+        // Construct (i * propagation matrix) to make hermitian matrix
+        for(ist = 0; ist < nst; ist++){
+            for (jst = 0; jst < nst; jst++){
+                if (ist == jst){
+                    exponent[ist][jst] = (eenergy[ist] - eenergy[0]) * edt;
+                }
+                else{
+                    exponent[ist][jst] = (- 1.0 * I * dv[ist][jst] + dec_h[ist][jst]) * edt;
+                }
+            }
+        }
+
     for(ist = 0; ist < nst; ist++){
         free(propagator[ist]);
         free(exponent[ist]);
