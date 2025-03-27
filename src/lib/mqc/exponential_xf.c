@@ -204,6 +204,59 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
             }
         }
 
+        // Convert the data type for exponent to dcomplex to exploit external math libraries
+        for(ist = 0; ist < nst; ist++){
+            for(jst = 0; jst < nst; jst++){
+                eigenvectors[nst * ist + jst].real = creal(exponent[jst][ist]);
+                eigenvectors[nst * ist + jst].imag = cimag(exponent[jst][ist]);
+            }
+        }
+
+        // Diagonalize the matrix (exponent) to obtain eigenvectors and eigenvalues
+        // After this operation, eigenvectors becomes the eigenvectors defined as P
+        lwork = -1;
+        zheev_("Vectors", "Lower", &nst, eigenvectors, &nst, eigenvalues, &wkopt, &lwork, rwork, &info);
+        lwork = (int)wkopt.real;
+        work = (dcomplex*)malloc(lwork * sizeof(dcomplex));
+        zheev_("Vectors", "Lower", &nst, eigenvectors, &nst, eigenvalues, work, &lwork, rwork, &info);
+        free(work);
+
+        // Create the diagonal matrix (exp_idiag = exp(- i * D))
+        for(ist = 0; ist < nst; ist++){
+            exp_idiag[nst * ist + ist].real = creal(cexp(- 1.0 * eigenvalues[ist] * I));
+            exp_idiag[nst * ist + ist].imag = cimag(cexp(- 1.0 * eigenvalues[ist] * I));
+        }
+
+        // Compute the product (P * exp(- i * D) * P^-1) and update the product for every electronic step
+        zgemm_("N", "N", &nst, &nst, &nst, &dcone, eigenvectors, &nst, exp_idiag, &nst, &dczero, tmp_mat, &nst);
+        zgemm_("N", "C", &nst, &nst, &nst, &dcone, tmp_mat, &nst, eigenvectors, &nst, &dczero, exp_iexponent, &nst);
+        // Update the product
+        zgemm_("N", "N", &nst, &nst, &nst, &dcone, exp_iexponent, &nst, product_old, &nst, &dczero, product_new, &nst);
+        // Backup the product
+        zgemm_("N", "N", &nst, &nst, &nst, &dcone, identity, &nst, product_new, &nst, &dczero, product_old, &nst);
+    }
+
+    // Convert the data type for the term (exp(- i * exponent)) to double complex to make propagation matrix
+    for(ist = 0; ist < nst; ist++){
+        for(jst = 0; jst < nst; jst++){
+            propagator[ist][jst] = product_new[nst * jst + ist].real + product_new[nst * jst + ist].imag * I;
+        }
+    }
+
+    // Update the coefficients using the propagation matrix
+    // TODO Is it necessary to change this to zgemv?
+    for(ist = 0; ist < nst; ist++){
+        tmp_coef = 0.0 + 0.0 * I;
+        for(jst = 0; jst < nst; jst++){
+            tmp_coef += propagator[ist][jst] * coef[jst];
+        }
+        coef_new[ist] = tmp_coef;
+    }
+ 
+    for(ist = 0; ist < nst; ist++){
+        coef[ist] = coef_new[ist];
+    }
+
     for(ist = 0; ist < nst; ist++){
         free(propagator[ist]);
         free(exponent[ist]);
