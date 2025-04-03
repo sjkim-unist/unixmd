@@ -134,6 +134,63 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
 
     for(iestep = 0; iestep < nesteps; iestep++){
 
+        // Initialize variables related to decoherence
+        for(iat = 0; iat < nat; iat++){
+            for(isp = 0; isp < ndim; isp++){
+                qmom[iat][isp] = 0.0;
+            }
+        }
+
+        for(ist = 0; ist < nst; ist++){
+            for(jst = 0; jst < nst; jst++){
+                dec[ist][jst] = 0.0;
+                dec_h[ist][jst] = 0.0 + 0.0 * I;
+            }
+        }
+
+        // Calculate densities from current coefficients
+        for(ist = 0; ist < nst; ist++){
+            for(jst = 0; jst < nst; jst++){
+                rho[jst][ist] = (conj(coef[jst]) * coef[ist]);
+            }
+        }
+
+        // Get quantum momentum from auxiliary positions and sigma values
+        for(ist = 0; ist < nst; ist++){ 
+
+            if(l_coh[ist] == 1){
+                for(iat = 0; iat < nat; iat++){
+                    for(isp = 0; isp < ndim; isp++){
+                        qmom[iat][isp] += 0.5 * rho[ist][ist] * (pos[iat][isp] - aux_pos[ist][iat][isp])
+                            / pow(sigma[iat][isp], 2.0) / mass[iat];
+                    }
+                }
+            }
+        }
+ 
+        // Get decoherence term from quantum momentum and phase
+        for(ist = 0; ist < nst; ist++){
+            for(jst = ist + 1; jst < nst; jst++){ 
+
+                if(l_coh[ist] == 1 && l_coh[jst] == 1){
+                    for(iat = 0; iat < nat; iat++){
+                        for(isp = 0; isp < ndim; isp++){
+                            dec[ist][jst] += qmom[iat][isp] * (phase[ist][iat][isp] - phase[jst][iat][isp]);
+                        }
+                    }
+                }
+                dec[jst][ist] = - 1.0 * dec[ist][jst];
+ 
+            }
+        }
+ 
+        // Get hamiltonian contribution from decoherence term
+        for(ist = 0; ist < nst; ist++){
+            for(jst = 0; jst < nst; jst++){
+                dec_h[ist][jst] -= rho[jst][ist] * dec[jst][ist] * I;
+            }
+        }
+
         // Interpolate energy and NACME terms between time t and t + dt
         for(ist = 0; ist < nst; ist++){
             eenergy[ist] = energy_old[ist] + (energy[ist] - energy_old[ist]) * (double)iestep * frac;
@@ -150,7 +207,7 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
                     exponent[ist][jst] = (eenergy[ist] - eenergy[0]) * edt;
                 }
                 else{
-                    exponent[ist][jst] = - 1.0 * I * dv[ist][jst] * edt;
+                    exponent[ist][jst] = (- 1.0 * I * dv[ist][jst] + dec_h[ist][jst]) * edt;
                 }
             }
         }
@@ -196,7 +253,7 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
 
     // Update the coefficients using the propagation matrix
     // TODO Is it necessary to change this to zgemv?
-//    zgemv_("N", &nst, &nst, &dcone, product_old, &nst, coef, 1, &dczero, tmp_coef, 1)
+    //    zgemv_("N", &nst, &nst, &dcone, product_old, &nst, coef, 1, &dczero, tmp_coef, 1)
     for(ist = 0; ist < nst; ist++){
         tmp_coef = 0.0 + 0.0 * I;
         for(jst = 0; jst < nst; jst++){
@@ -204,7 +261,7 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
         }
         coef_new[ist] = tmp_coef;
     }
-
+ 
     for(ist = 0; ist < nst; ist++){
         coef[ist] = coef_new[ist];
     }
