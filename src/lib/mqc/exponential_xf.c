@@ -69,7 +69,6 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
 
     dcomplex *tmp_mat = malloc((nst * nst) * sizeof(dcomplex));
     dcomplex *identity = malloc((nst * nst) * sizeof(dcomplex));
-    double complex *tmp_dec = malloc((nst * nst) * sizeof(double complex));
 
     dcomplex wkopt;
     dcomplex *work;
@@ -254,7 +253,7 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
 
     // Update the coefficients using the propagation matrix
     // TODO Is it necessary to change this to zgemv?
-    //    zgemv_("N", &nst, &nst, &dcone, product_old, &nst, coef, 1, &dczero, tmp_coef, 1)
+//    zgemv_("N", &nst, &nst, &dcone, product_old, &nst, coef, 1, &dczero, tmp_coef, 1)
     for(ist = 0; ist < nst; ist++){
         tmp_coef = 0.0 + 0.0 * I;
         for(jst = 0; jst < nst; jst++){
@@ -262,18 +261,21 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
         }
         coef_new[ist] = tmp_coef;
     }
- 
+
     for(ist = 0; ist < nst; ist++){
         coef[ist] = coef_new[ist];
     }
 
     if(verbosity >= 1){
+        double complex *xf_c_dot = malloc(nst * sizeof(double complex));
         for(ist = 0; ist < nst; ist++){
+            xf_c_dot[ist] = 0.0 + 0.0 * I;
             for(jst = 0; jst < nst; jst++){
-                tmp_dec[nst * ist + jst] = dec[ist][jst] + 0*I;
+                xf_c_dot[ist] -= (conj(coef[jst]) * coef[jst]) * dec[jst][ist] * coef[ist];
             }
         }
-        xf_print_coef(nst, coef, tmp_dec, dotpopdec, "exponential");
+        xf_print_coef(nst, coef, xf_c_dot, dotpopdec);
+        free(xf_c_dot);
     }
 
     for(ist = 0; ist < nst; ist++){
@@ -304,7 +306,6 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
 
     free(tmp_mat);
     free(identity);
-    free(tmp_dec);
     free(rwork);
 
 }

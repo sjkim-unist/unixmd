@@ -125,7 +125,7 @@ static void rk4_coef(int nat, int ndim, int nst, int nesteps, double dt, int *l_
     }
 
     if(verbosity >= 1){
-        xf_print_coef(nst, coef, xf_c_dot, dotpopdec, "rk4");
+        xf_print_coef(nst, coef, xf_c_dot, dotpopdec);
     }
 
     for(ist = 0; ist < nst; ist++){

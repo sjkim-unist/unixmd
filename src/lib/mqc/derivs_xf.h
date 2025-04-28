@@ -83,25 +83,11 @@ static void xf_cdot(int nat, int ndim, int nst, int *l_coh, double *mass, double
 }
 
 // Routine to print xf debug info
-static void xf_print_coef(int nst, double complex *coef, double complex *tmp_input, double *dotpopdec, char *propagator){
+static void xf_print_coef(int nst, double complex *coef, double complex *xfcdot, double *dotpopdec){
     int ist;
- 
-    // In this case, tmp_input is xfcdot
-    if(strcmp(propagator, "rk4") == 0){
-        for(ist = 0; ist < nst; ist++){
-            dotpopdec[ist] = 2.0 * creal(tmp_input[ist] * conj(coef[ist]));
-        }
-    }
-    // In this case, tmp_input is dec
-    else if(strcmp(propagator, "exponential") == 0){
-        int jst;
 
-        for(ist = 0; ist < nst; ist++){
-            dotpopdec[ist] = 0.0;
-            for(jst = 0; jst < nst; jst++){
-                dotpopdec[ist] -= 2.0 * creal(tmp_input[nst * jst + ist] * conj(coef[ist]) * coef[ist] * conj(coef[jst]) * coef[jst]);
-            }
-        } 
+    for(ist = 0; ist < nst; ist++){
+        dotpopdec[ist] = 2.0 * creal(xfcdot[ist] * conj(coef[ist]));
     }
 }
 
