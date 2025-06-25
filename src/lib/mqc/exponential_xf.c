@@ -267,15 +267,7 @@ static void exponential_coef(int nat, int ndim, int nst, int nesteps, double dt,
     }
 
     if(verbosity >= 1){
-        double complex *xf_c_dot = malloc(nst * sizeof(double complex));
-        for(ist = 0; ist < nst; ist++){
-            xf_c_dot[ist] = 0.0 + 0.0 * I;
-            for(jst = 0; jst < nst; jst++){
-                xf_c_dot[ist] -= (conj(coef[jst]) * coef[jst]) * dec[jst][ist] * coef[ist];
-            }
-        }
-        xf_print_coef(nst, coef, xf_c_dot, dotpopdec);
-        free(xf_c_dot);
+        xf_print_coef(nat, ndim, nst, l_coh, mass, sigma, pos, qmom, aux_pos, phase, coef, dotpopdec);
     }
 
     for(ist = 0; ist < nst; ist++){
