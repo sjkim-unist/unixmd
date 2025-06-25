@@ -82,7 +82,7 @@ static void xf_cdot(int nat, int ndim, int nst, int *l_coh, double *mass, double
 
 }
 
-// // Routine to print xf debug info
+// Routine to print xf debug info
 static void xf_print_coef(int nat, int ndim, int nst, int *l_coh, double *mass, double **sigma,
     double **pos, double **qmom, double ***aux_pos, double ***phase, double complex *c, double *dotpopdec){
 

@@ -247,7 +247,7 @@ static void rk4_rho(int nat, int ndim, int nst, int nesteps, double dt, int *l_c
     }
 
     if(verbosity >= 1){
-        xf_print_rho(nat, ndim, nst, l_coh, mass, sigma, pos, qmom, aux_pos, phase, rho, xf_rho_dot); 
+        xf_print_rho(nat, ndim, nst, l_coh, mass, sigma, pos, qmom, aux_pos, phase, rho, dotpopdec); 
     }
 
     for(ist = 0; ist < nst; ist++){
